@@ -1824,6 +1824,13 @@ static const rpi_hw_t rpi_hw_info[] = {
         .desc = "Model 3B",
         .pFunc = write_virtual_gpio,
     },
+     // Model 3A+
+    {
+        .hwver  = 0x9020E0,
+        .powerEn = 133,
+        .desc = "Model 3A+",
+        .pFunc = write_virtual_gpio,
+    },
 	   // Model 4B
     {
         .hwver  = 0xb03112,
@@ -1863,16 +1870,18 @@ const rpi_hw_t *rpi_hw_detect(void)
             {
                 continue;
             }
-            printf("Hardare version: %x\r\n",rev);
+            printf("Hardware version: %x\r\n",rev);
             for (i = 0; i < (sizeof(rpi_hw_info) / sizeof(rpi_hw_info[0])); i++)
             {
                 uint32_t hwver = rpi_hw_info[i].hwver;
                 // Take out warranty and manufacturer bits
                 hwver &= ~(RPI_WARRANTY_MASK | RPI_MANUFACTURER_MASK);
                 rev &= ~(RPI_WARRANTY_MASK | RPI_MANUFACTURER_MASK);
-			
+                printf("Hardware : rev %X, hwver %X\r\n",rev, hwver);
+ 			
                 if (rev == hwver)
                 {
+                    printf("Hardare Info: %X\r\n",rpi_hw_info[i].hwver);
                     result = &rpi_hw_info[i];
 
                     goto done;

@@ -823,6 +823,7 @@ static void camera_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buff
    // We pass our file handle and other stuff in via the userdata field.
 
    PORT_USERDATA *pData = (PORT_USERDATA *)port->userdata;
+//   struct CONTEXT_T *ctx = (struct CONTEXT_T *)port->userdata;
 
    if (pData && pData->file_handle)
    {
@@ -832,7 +833,7 @@ static void camera_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buff
  //     if (pData->pstate->onlyLuma)
  //        bytes_to_write = vcos_min(buffer->length, port->format->es->video.width * port->format->es->video.height);
 
-	vcos_log_error("camera_buffer_callback data len is %d file handle is %x",bytes_to_write,pData->file_handle);
+//	vcos_log_error("camera_buffer_callback data len is %d file handle is %x",bytes_to_write,pData->file_handle);
 	
       if (bytes_to_write && pData->file_handle)
       {
@@ -847,14 +848,24 @@ static void camera_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buff
       if (buffer->length && bytes_written != bytes_to_write)
       {
          vcos_log_error("Unable to write buffer to file - aborting %d vs %d", bytes_written, bytes_to_write);
-         //complete = 1;
+         complete = 1;
       }
 
       // Check end of frame or error
-     // if (buffer->flags & (MMAL_BUFFER_HEADER_FLAG_FRAME_END | MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED))
-     //    complete = 1;
-      if(buffer->length && bytes_written == bytes_to_write)
-	  complete = 1;
+      else if(buffer->length && bytes_written == bytes_to_write)
+	   {
+         complete = 1;
+      }
+      else if (buffer->flags & (MMAL_BUFFER_HEADER_FLAG_FRAME_END | MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED))
+      {
+         vcos_log_error("end of frame or error : %d vs %d 0x%X", bytes_written, bytes_to_write, buffer->flags);
+         complete = 1;
+      }
+      else
+      {
+         vcos_log_error("Unknown end condition !!!! : 0x%X", buffer->flags);
+        
+      }
    }
   /* else
    {
@@ -1519,7 +1530,7 @@ int main(int argc, const char **argv)
 
          encoder_output_port->userdata = (struct MMAL_PORT_USERDATA_T *)&callback_data;
 
-	 mmal_port_parameter_set_boolean(
+         mmal_port_parameter_set_boolean(
                         encoder_output_port, MMAL_PARAMETER_EXIF_DISABLE, 1);
          if (state.verbose)
             fprintf(stderr, "Enabling camera still output port\n");
@@ -1670,19 +1681,17 @@ error:
       if (output_file)
          fclose(output_file);
 
-
-
     if (state.preview_parameters.wantPreview && state.preview_connection)
          mmal_connection_destroy(state.preview_connection);
-      if (state.encoder_connection)
+       if (state.encoder_connection)
          mmal_connection_destroy(state.encoder_connection);
-      if (state.splitter_connection)
+     if (state.splitter_connection)
          mmal_connection_destroy(state.splitter_connection);
-      // Disable all our ports that are not handled by connections
+     // Disable all our ports that are not handled by connections
      //   check_disable_port(camera_still_port);
       check_disable_port(encoder_output_port);
-      check_disable_port(splitter_preview_port);
-      // Disable all our ports that are not handled by connections
+     check_disable_port(splitter_preview_port);
+       // Disable all our ports that are not handled by connections
  
 
       /* Disable components */
@@ -1697,13 +1706,13 @@ error:
  /* Disable components */
       if (state.encoder_component)
          mmal_component_disable(state.encoder_component);
-	  
+ 	  
      if (state.veye_camera_isp_state.isp_component)
          mmal_component_disable(state.veye_camera_isp_state.isp_component);
-      if (state.veye_camera_isp_state.camera_component)
+     if (state.veye_camera_isp_state.camera_component)
          mmal_component_disable(state.veye_camera_isp_state.camera_component);
 
-      raspipreview_destroy(&state.preview_parameters);
+     raspipreview_destroy(&state.preview_parameters);
       destroy_splitter_component(&state);
       destroy_encoder_component(&state);
       destroy_veye_camera_isp_component(&state.veye_camera_isp_state);

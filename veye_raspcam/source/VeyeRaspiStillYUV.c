@@ -619,18 +619,23 @@ static void camera_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buff
          mmal_buffer_header_mem_unlock(buffer);
       }
 
-      // We need to check we wrote what we wanted - it's possible we have run out of storage.
+       // We need to check we wrote what we wanted - it's possible we have run out of storage.
       if (buffer->length && bytes_written != bytes_to_write)
       {
          vcos_log_error("Unable to write buffer to file - aborting %d vs %d", bytes_written, bytes_to_write);
-         //complete = 1;
+         complete = 1;
       }
 
       // Check end of frame or error
-     // if (buffer->flags & (MMAL_BUFFER_HEADER_FLAG_FRAME_END | MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED))
-     //    complete = 1;
       if(buffer->length && bytes_written == bytes_to_write)
-	  complete = 1;
+	   {
+         complete = 1;
+      }
+      else if (buffer->flags & (MMAL_BUFFER_HEADER_FLAG_FRAME_END | MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED))
+      {
+         vcos_log_error("end of frame or error : %d vs %d 0x%X", bytes_written, bytes_to_write, buffer->flags);
+         complete = 1;
+      }
    }
   /* else
    {
